@@ -1,0 +1,38 @@
+# Model Profiles Configuration for INFERCTRL
+models:
+  - id: "llama-3-8b"
+    name: "Llama 3 8B Instruct"
+    family: "llama-3"
+    category: "fast"
+    context_window: 8192
+    default_cost_per_1k_tokens: 0.0005  # $0.0005 per 1k tokens
+    simulated:
+      ttft_base_ms: 45.0
+      prefill_rate_tok_per_sec: 1400.0
+      decode_rate_tok_per_sec: 95.0
+      quality_base_score: 0.88
+      task_quality:
+        chat: 0.91
+        code: 0.85
+        reasoning: 0.82
+        summarization: 0.90
+        structured_json: 0.87
+
+  - id: "llama-3-70b"
+    name: "Llama 3 70B Instruct"
+    family: "llama-3"
+    category: "quality"
+    context_window: 8192
+    default_cost_per_1k_tokens: 0.0040  # $0.0040 per 1k tokens (8x cost)
+    simulated:
+      ttft_base_ms: 180.0
+      prefill_rate_tok_per_sec: 450.0
+      decode_rate_tok_per_sec: 32.0
+      quality_base_score: 0.96
+      task_quality:
+        chat: 0.97
+        code: 0.95
+        reasoning: 0.94
+        summarization: 0.96
+        structured_json: 0.96
+

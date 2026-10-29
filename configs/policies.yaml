@@ -1,0 +1,33 @@
+# Policy and SLO Configuration for INFERCTRL
+slo:
+  target_p95_latency_ms: 1000.0   # Hard constraint: P95 latency must be <= 1000ms
+  target_p99_latency_ms: 1800.0
+  max_error_rate: 0.02            # Max 2% error rate
+  max_quality_regression_pct: 1.0 # Max 1.0% quality regression allowed against baseline
+
+optimization:
+  weights:
+    latency_p95: 0.40
+    cost_per_request: 0.40
+    error_rate: 0.10
+    memory_pressure: 0.10
+  budget:
+    max_trials_per_run: 6
+    warmup_requests: 30
+    measured_requests: 120
+    random_seed: 42
+
+guardrails:
+  allowed_knobs:
+    max_concurrency: [1, 64]
+    max_batch_size: [1, 128]
+    batch_wait_ms: [0.0, 100.0]
+    routing_mix:
+      min_ratio: 0.0
+      max_ratio: 1.0
+  canary:
+    initial_traffic_pct: 5.0
+    evaluation_duration_seconds: 60
+    auto_rollback_on_slo_breach: true
+    allow_auto_expansion: false
+

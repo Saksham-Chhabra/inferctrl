@@ -1,0 +1,48 @@
+# Simulator Hardware & Workload Profiles
+simulator:
+  clock_step_ms: 5.0
+  gpu_pool:
+    count: 4
+    memory_gb_per_gpu: 80.0
+    vram_headroom_fraction: 0.15
+  queue:
+    max_queue_depth: 256
+    drop_policy: "tail_drop"
+  network:
+    base_latency_jitter_ms: 2.0
+
+scenarios:
+  steady_short:
+    arrival_rate_rps: 25.0
+    burstiness: 1.0
+    prompt_tokens_mean: 250
+    output_tokens_mean: 150
+    task_distribution:
+      chat: 0.40
+      code: 0.20
+      reasoning: 0.20
+      summarization: 0.10
+      structured_json: 0.10
+
+  bursty_spike:
+    arrival_rate_rps: 75.0
+    burstiness: 2.5
+    prompt_tokens_mean: 600
+    output_tokens_mean: 280
+    task_distribution:
+      chat: 0.35
+      code: 0.20
+      reasoning: 0.25
+      summarization: 0.10
+      structured_json: 0.10
+
+  long_context:
+    arrival_rate_rps: 15.0
+    burstiness: 1.2
+    prompt_tokens_mean: 3200
+    output_tokens_mean: 450
+    task_distribution:
+      summarization: 0.50
+      reasoning: 0.30
+      code: 0.20
+
