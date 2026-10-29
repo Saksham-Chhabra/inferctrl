@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INFERCTRL — Live Chatbot & Model Router Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            dark: {
+              900: '#0b0f17',
+              850: '#111827',
+              800: '#151d2e',
+              750: '#1e293b',
+              700: '#334155',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #0b0f17; color: #f1f5f9; font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-dark-900 text-slate-100 selection:bg-blue-600 selection:text-white">
+
+  <!-- TOP HEADER -->
+  <header class="h-14 border-b border-slate-800 bg-dark-850 px-6 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-xs mono">
+        IC
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="font-bold text-sm tracking-wider text-white mono">INFERCTRL CHATBOT</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-mono border border-emerald-700/50">GATEWAY v1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Links to Dashboard & Presentation -->
+    <div class="flex items-center space-x-3 text-xs">
+      <a href="/" class="px-3 py-1.5 rounded bg-dark-800 border border-slate-700 hover:bg-dark-750 text-slate-300 transition font-medium">
+        &larr; Control Room Console
+      </a>
+      <a href="/presentation" class="px-3 py-1.5 rounded bg-dark-800 border border-slate-700 hover:bg-dark-750 text-slate-300 transition font-medium">
+        📊 Pitch Deck
+      </a>
+      <div class="border-l border-slate-700 h-5"></div>
+      <span class="text-slate-400">Endpoint: <span class="mono text-blue-400">/v1/chat/completions</span></span>
+    </div>
+  </header>
+
+  <!-- MAIN CHAT CONTAINER -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 flex flex-col space-y-4 h-[calc(100vh-3.5rem)]">
+
+    <!-- ROUTING CONTROLS BAR -->
+    <div class="bg-dark-850 border border-slate-800 p-3 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400 font-medium">Routing Strategy:</span>
+        <select id="strategySelect" class="bg-dark-800 border border-slate-700 rounded px-2.5 py-1 text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+          <option value="balanced">Balanced (Cost + Latency + Quality)</option>
+          <option value="lowest_cost">Lowest Cost</option>
+          <option value="lowest_latency">Lowest Latency</option>
+          <option value="quality_first">Quality First</option>
+          <option value="round_robin">Round Robin</option>
+        </select>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400 font-medium">Model Target:</span>
+        <select id="modelSelect" class="bg-dark-800 border border-slate-700 rounded px-2.5 py-1 text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+          <option value="auto">auto (Autonomous Optimizer)</option>
+          <option value="simulator:sim-llama-3-8b">Simulator: Llama 3 8B (Fast)</option>
+          <option value="simulator:sim-llama-3-70b">Simulator: Llama 3 70B (Quality)</option>
+          <option value="simulator:sim-gemini-flash">Simulator: Gemini Flash</option>
+          <option value="gemini:gemini-1.5-flash">Gemini: 1.5 Flash (Live API)</option>
+          <option value="gemini:gemini-1.5-pro">Gemini: 1.5 Pro (Live API)</option>
+          <option value="ollama:llama3">Ollama: Llama 3 (Local)</option>
+        </select>
+      </div>
+
+      <div class="flex items-center space-x-2 text-[11px] text-slate-400">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Gateway Active</span>
+      </div>
+    </div>
+
+    <!-- QUICK PROMPT PILLS -->
+    <div class="flex items-center space-x-2 overflow-x-auto text-xs pb-1 custom-scrollbar">
+      <span class="text-slate-500 text-[11px] shrink-0">Quick prompts:</span>
+      <button onclick="fillPrompt('Explain Redis in-memory caching and why it is used.')" class="px-2.5 py-1 rounded bg-dark-800 hover:bg-dark-750 border border-slate-700/80 text-slate-300 shrink-0">
+        Explain Redis Caching
+      </button>
+      <button onclick="fillPrompt('Write a Python function to compute the longest palindromic substring.')" class="px-2.5 py-1 rounded bg-dark-800 hover:bg-dark-750 border border-slate-700/80 text-slate-300 shrink-0">
+        Python Code Task
+      </button>
+      <button onclick="fillPrompt('A train leaves Station A at 60 mph and Station B at 80 mph. They are 280 miles apart. When do they meet?')" class="px-2.5 py-1 rounded bg-dark-800 hover:bg-dark-750 border border-slate-700/80 text-slate-300 shrink-0">
+        Math / Reasoning Task
+      </button>
+      <button onclick="fillPrompt('Extract invoice JSON: Acme Corp billed $1,450.00 USD on October 24th.')" class="px-2.5 py-1 rounded bg-dark-800 hover:bg-dark-750 border border-slate-700/80 text-slate-300 shrink-0">
+        JSON Extraction Task
+      </button>
+    </div>
+
+    <!-- MESSAGES THREAD -->
+    <div id="messagesContainer" class="flex-1 bg-dark-850 border border-slate-800 rounded-xl p-4 overflow-y-auto space-y-4 custom-scrollbar">
+      <!-- Welcome Message -->
+      <div class="flex items-start space-x-3">
+        <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0 mono">
+          IC
+        </div>
+        <div class="space-y-1 max-w-2xl">
+          <div class="text-[11px] text-slate-400 font-mono">INFERCTRL Gateway</div>
+          <div class="bg-dark-800 border border-slate-700/60 p-3 rounded-lg text-xs leading-relaxed text-slate-200">
+            Welcome to the INFERCTRL Demonstration Chatbot. Submit any prompt using <code class="mono text-blue-400">model="auto"</code>. The router will evaluate your request across cost, latency, and quality objectives, dispatch to the optimal model, and provide a full transparent telemetry breakdown.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT INPUT BOX -->
+    <form onsubmit="handleSend(event)" class="bg-dark-850 border border-slate-800 p-2 rounded-xl flex items-center space-x-2">
+      <input
+        id="userInput"
+        type="text"
+        placeholder="Type a prompt (e.g. 'Explain Redis caching' or code question)..."
+        class="flex-1 bg-transparent px-3 py-2 text-xs text-white focus:outline-none placeholder-slate-500"
+        autocomplete="off"
+      />
+      <button
+        type="submit"
+        id="sendBtn"
+        class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-1 shadow-md shadow-blue-500/20 transition"
+      >
+        <span>Send</span>
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      </button>
+    </form>
+  </main>
+
+  <script>
+    const conversation = [
+      { role: "system", content: "You are a helpful and knowledgeable AI assistant operating under INFERCTRL optimization." }
+    ];
+
+    function fillPrompt(text) {
+      document.getElementById('userInput').value = text;
+      document.getElementById('userInput').focus();
+    }
+
+    async function handleSend(e) {
+      e.preventDefault();
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      appendUserMessage(text);
+      conversation.push({ role: "user", content: text });
+
+      const model = document.getElementById('modelSelect').value;
+      const strategy = document.getElementById('strategySelect').value;
+
+      // Loading indicator
+      const loadingId = appendLoadingMessage();
+
+      try {
+        const payload = {
+          model: model,
+          messages: conversation,
+          routing_strategy: strategy
+        };
+
+        const res = await fetch('/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        removeLoadingMessage(loadingId);
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          appendAssistantMessage(
+            `Error (${res.status}): ${errData.detail || 'Gateway error'}`,
+            null
+          );
+          return;
+        }
+
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+        conversation.push({ role: "assistant", content: reply });
+        appendAssistantMessage(reply, data.inferctrl, data.usage);
+      } catch (err) {
+        removeLoadingMessage(loadingId);
+        appendAssistantMessage(`Connection failed: ${err.message}`, null);
+      }
+    }
+
+    function appendUserMessage(text) {
+      const container = document.getElementById('messagesContainer');
+      const html = `
+        <div class="flex items-start justify-end space-x-3">
+          <div class="space-y-1 max-w-2xl text-right">
+            <div class="text-[11px] text-slate-400 font-mono">You</div>
+            <div class="bg-blue-600/20 border border-blue-500/40 p-3 rounded-lg text-xs leading-relaxed text-blue-100 text-left">
+              ${escapeHtml(text)}
+            </div>
+          </div>
+          <div class="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold shrink-0 mono">
+            U
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function appendAssistantMessage(content, inferctrl, usage) {
+      const container = document.getElementById('messagesContainer');
+      
+      let badgeHtml = '';
+      if (inferctrl) {
+        const sourceColor = inferctrl.measurement_source === 'actual' ? 'text-emerald-400 border-emerald-700 bg-emerald-950/60' : 'text-amber-400 border-amber-700 bg-amber-950/60';
+        badgeHtml = `
+          <div class="mt-2.5 pt-2 border-t border-slate-700/60 flex flex-wrap items-center gap-2 text-[10px] mono">
+            <span class="px-2 py-0.5 rounded bg-dark-850 border border-slate-700 text-blue-400 font-semibold">
+              &bull; ${inferctrl.provider.toUpperCase()} : ${inferctrl.selected_model}
+            </span>
+            <span class="px-2 py-0.5 rounded bg-dark-850 border border-slate-700 text-slate-300">
+              Policy: ${inferctrl.routing_strategy}
+            </span>
+            <span class="px-2 py-0.5 rounded bg-dark-850 border border-slate-700 text-slate-300">
+              TTFT: ${inferctrl.ttft_ms}ms | Total: ${inferctrl.total_latency_ms}ms
+            </span>
+            <span class="px-2 py-0.5 rounded bg-dark-850 border border-slate-700 text-emerald-400">
+              Cost: $${inferctrl.estimated_cost_usd}
+            </span>
+            <span class="px-2 py-0.5 rounded border ${sourceColor} uppercase font-bold">
+              [${inferctrl.measurement_source}]
+            </span>
+          </div>
+          <div class="text-[10px] text-slate-400 italic mt-1 font-sans">
+            Decision: ${escapeHtml(inferctrl.decision_reason)}
+          </div>
+        `;
+      }
+
+      const html = `
+        <div class="flex items-start space-x-3">
+          <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0 mono">
+            IC
+          </div>
+          <div class="space-y-1 max-w-2xl w-full">
+            <div class="text-[11px] text-slate-400 font-mono">${inferctrl ? inferctrl.selected_model : 'Assistant'}</div>
+            <div class="bg-dark-800 border border-slate-700/60 p-3 rounded-lg text-xs leading-relaxed text-slate-200">
+              <div>${formatContent(content)}</div>
+              ${badgeHtml}
+            </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function appendLoadingMessage() {
+      const id = 'loading-' + Date.now();
+      const container = document.getElementById('messagesContainer');
+      const html = `
+        <div id="${id}" class="flex items-start space-x-3">
+          <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0 mono animate-pulse">
+            IC
+          </div>
+          <div class="bg-dark-800 border border-slate-700/60 px-4 py-2.5 rounded-lg text-xs text-slate-400 flex items-center space-x-2">
+            <span class="animate-spin text-blue-400">&circlearrowright;</span>
+            <span>Evaluating route & generating response...</span>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+      container.scrollTop = container.scrollHeight;
+      return id;
+    }
+
+    function removeLoadingMessage(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    function formatContent(text) {
+      if (text.includes('```')) {
+        return text.replace(/```python([\s\S]*?)```/g, '<pre class="bg-dark-900 border border-slate-700 p-2.5 rounded my-2 font-mono text-[11px] text-emerald-300 overflow-x-auto"><code>$1</code></pre>')
+                   .replace(/```([\s\S]*?)```/g, '<pre class="bg-dark-900 border border-slate-700 p-2.5 rounded my-2 font-mono text-[11px] text-slate-300 overflow-x-auto"><code>$1</code></pre>');
+      }
+      return escapeHtml(text).replace(/\n/g, '<br/>');
+    }
+
+    function escapeHtml(string) {
+      const entityMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(string).replace(/[&<>"']/g, s => entityMap[s]);
+    }
+  </script>
+</body>
+</html>
+
